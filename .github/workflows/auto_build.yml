@@ -59,7 +59,7 @@ jobs:
           done
 
           # 读取 CHANGELOG.md 内容，处理换行符（确保 Markdown 格式正常渲染）
-          CHANGELOG_CONTENT="构建SHA：${GITHUB_SHA}\n构建时间：$(date +%Y-%m-%d %H:%M:%S)"
+          CHANGELOG_CONTENT="构建SHA：${GITHUB_SHA}\n构建时间：$(date '+%Y-%m-%d %H:%M:%S')"
 
           # 输出关键变量，传递给后续步骤
           echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
