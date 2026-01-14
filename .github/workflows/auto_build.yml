@@ -1,6 +1,5 @@
 name: Build Go Project and Publish Releases
 
-# 触发方式：指定分支（main/dev）有代码提交时触发，且仅核心文件修改时生效
 on:
   push:
     branches:
@@ -21,27 +20,42 @@ jobs:
           go-version: '1.25'
           cache: true
 
+      # 新增步骤：自动创建 Git Tag（基于提交哈希+时间戳，避免冲突）
+      - name: Create Auto Git Tag
+        id: create-tag
+        run: |
+          COMMIT_HASH="${GITHUB_SHA::8}"
+          BUILD_TIME="$(date +%Y%m%d%H%M%S)"
+          AUTO_TAG="auto-${COMMIT_HASH}-${BUILD_TIME}"
+          
+          # 配置 Git 身份（否则无法提交 Tag）
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # 创建并推送 Tag 到远程仓库
+          git tag ${AUTO_TAG}
+          git push origin ${AUTO_TAG}
+          
+          # 输出 Tag 名称
+          echo "auto_tag=${AUTO_TAG}" >> $GITHUB_OUTPUT
+
       - name: Build Go Binary
         id: build
         run: |
-          # 调整版本号：不再依赖 Tag，使用 提交哈希+时间戳 作为版本标识（避免冲突）
           PROJECT_NAME="$(basename ${GITHUB_REPOSITORY})"
-          COMMIT_HASH="${GITHUB_SHA::8}"  # 提取前 8 位提交哈希（便于区分版本）
-          BUILD_TIME="$(date +%Y%m%d%H%M%S)"  # 构建时间戳
-          TAG_VERSION="dev-${COMMIT_HASH}-${BUILD_TIME}"  # 自定义版本格式
+          AUTO_TAG="${{ steps.create-tag.outputs.auto_tag }}"
           OUTPUT_DIR="./dist"
 
-          # 创建输出目录
           mkdir -p ${OUTPUT_DIR}
 
-          # 跨平台构建（不变）
-          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${TAG_VERSION}-linux-amd64 ./
-          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${TAG_VERSION}-linux-arm64 ./
-          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${TAG_VERSION}-windows-amd64.exe ./
-          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${TAG_VERSION}-darwin-amd64 ./
-          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${TAG_VERSION}-darwin-arm64 ./
+          # 跨平台构建（略，同之前配置）
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-linux-amd64 ./
+          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-linux-arm64 ./
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-windows-amd64.exe ./
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-darwin-amd64 ./
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-darwin-arm64 ./
 
-          # 压缩产物（不变）
+          # 压缩产物（略，同之前配置）
           cd ${OUTPUT_DIR}
           for file in *; do
             if [ -f "$file" ]; then
@@ -54,22 +68,18 @@ jobs:
             fi
           done
 
-          # 输出产物信息（不变）
           echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
-          echo "project_name=${PROJECT_NAME}" >> $GITHUB_OUTPUT
-          echo "tag_version=${TAG_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create and Publish GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          # 调整 Release 标题：使用自定义的 dev 版本号
-          name: Dev Release ${TAG_VERSION}
+          tag_name: ${{ steps.create-tag.outputs.auto_tag }}  # 指定自动创建的 Tag
+          name: Auto Release ${{ steps.create-tag.outputs.auto_tag }}
           body: |
-            ## 开发版自动构建（基于代码提交）
+            ## 自动创建的 Release（基于代码提交）
             - 提交哈希：${GITHUB_SHA}
             - 构建时间：$(date +%Y-%m-%d %H:%M:%S)
-            - 支持 Linux/Windows/macOS 多平台
           files: ${{ steps.build.outputs.output_dir }}/*
-          prerelease: true  # 标记为预发布（避免与正式 Tag 版本混淆）
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
