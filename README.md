@@ -14,8 +14,6 @@ The universal proxy platform.
 
 ## Documentation
 
-https://sing-box.sagernet.org
-
 ## License
 
 ```
