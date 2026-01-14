@@ -31,7 +31,7 @@ jobs:
           PROJECT_NAME="$(basename ${GITHUB_REPOSITORY})"
           COMMIT_HASH="${GITHUB_SHA::8}"  # 提取前 8 位提交哈希
           BUILD_TIME="$(date +%Y%m%d%H%M%S)"  # 构建时间戳
-          AUTO_TAG="auto-${COMMIT_HASH}-${BUILD_TIME}"  # 自动 Tag 格式
+          AUTO_TAG="v${BUILD_TIME}"  # 自动 Tag 格式
           OUTPUT_DIR="./dist"  # 产物输出目录
 
           # 创建输出目录
@@ -39,11 +39,11 @@ jobs:
 
           # 跨平台构建（精简二进制体积，-ldflags "-s -w" 移除调试信息）
           echo "开始跨平台构建，版本：${AUTO_TAG}"
-          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-linux-amd64 ./
-          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-linux-arm64 ./
-          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-windows-amd64.exe ./
-          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-darwin-amd64 ./
-          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-darwin-arm64 ./
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-linux-amd64 ./
+          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-linux-arm64 ./
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-windows-amd64.exe ./
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-darwin-amd64 ./
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-darwin-arm64 ./
 
           # 压缩产物（减小体积，Linux/macOS 生成 .tar.gz，Windows 生成 .zip）
           cd ${OUTPUT_DIR}
@@ -59,7 +59,7 @@ jobs:
           done
 
           # 读取 CHANGELOG.md 内容，处理换行符（确保 Markdown 格式正常渲染）
-          CHANGELOG_CONTENT="构建SHA：${GITHUB_SHA}\n构建时间：$(date '+%Y-%m-%d %H:%M:%S')"
+          CHANGELOG_CONTENT="- 构建SHA：${GITHUB_SHA}\\n-构建时间：$(date '+%Y-%m-%d %H:%M:%S')"
 
           # 输出关键变量，传递给后续步骤
           echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
@@ -92,7 +92,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.push-tag.outputs.pushed_tag }}  # 指定自动创建的 Tag
-          name: Auto Release (main) - ${{ steps.push-tag.outputs.pushed_tag }}  # Release 标题
+          name: ${{ steps.push-tag.outputs.pushed_tag }}  # Release 标题
           body: ${{ steps.build.outputs.changelog_content }}  # 核心：读取 CHANGELOG.md 内容
           files: ${{ steps.build.outputs.output_dir }}/*  # 上传所有压缩产物
           prerelease: false  # 标记为预发布（避免与正式 Tag 版本混淆，可改为 false）
