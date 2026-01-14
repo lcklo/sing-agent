@@ -1,4 +1,4 @@
-name: Build Go Project (main) and Publish Releases
+name: Auto-Build
 
 # 触发条件：main 分支有代码提交，且核心文件修改时触发
 on:
@@ -60,7 +60,7 @@ jobs:
 
           # 读取 CHANGELOG.md 内容，处理换行符（确保 Markdown 格式正常渲染）
           CHANGELOG_CONTENT="- 构建SHA：${GITHUB_SHA}<br>
-          -构建时间：$(date '+%Y-%m-%d %H:%M:%S')"
+          - 构建时间：$(date '+%Y-%m-%d %H:%M:%S')"
 
           # 输出关键变量，传递给后续步骤
           echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
