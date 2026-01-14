@@ -31,7 +31,7 @@ jobs:
           PROJECT_NAME="$(basename ${GITHUB_REPOSITORY})"
           COMMIT_HASH="${GITHUB_SHA::8}"  # 提取前 8 位提交哈希
           BUILD_TIME="$(date +%Y%m%d%H%M%S)"  # 构建时间戳
-          AUTO_TAG="auto-main-${COMMIT_HASH}-${BUILD_TIME}"  # 自动 Tag 格式
+          AUTO_TAG="auto-${COMMIT_HASH}-${BUILD_TIME}"  # 自动 Tag 格式
           OUTPUT_DIR="./dist"  # 产物输出目录
 
           # 创建输出目录
@@ -59,7 +59,7 @@ jobs:
           done
 
           # 读取 CHANGELOG.md 内容，处理换行符（确保 Markdown 格式正常渲染）
-          CHANGELOG_CONTENT=$(awk '{printf "%s\\n", $0}' ../CHANGELOG.md)
+          CHANGELOG_CONTENT="构建SHA：${GITHUB_SHA}\n构建时间：$(date +%Y-%m-%d %H:%M:%S)"
 
           # 输出关键变量，传递给后续步骤
           echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
@@ -95,6 +95,6 @@ jobs:
           name: Auto Release (main) - ${{ steps.push-tag.outputs.pushed_tag }}  # Release 标题
           body: ${{ steps.build.outputs.changelog_content }}  # 核心：读取 CHANGELOG.md 内容
           files: ${{ steps.build.outputs.output_dir }}/*  # 上传所有压缩产物
-          prerelease: true  # 标记为预发布（避免与正式 Tag 版本混淆，可改为 false）
+          prerelease: false  # 标记为预发布（避免与正式 Tag 版本混淆，可改为 false）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub 自动注入权限令牌
