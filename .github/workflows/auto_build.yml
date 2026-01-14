@@ -50,10 +50,8 @@ jobs:
 
           # 跨平台构建（略，同之前配置）
           GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-linux-amd64 ./
-          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-linux-arm64 ./
           GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-windows-amd64.exe ./
           GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-darwin-amd64 ./
-          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-${AUTO_TAG}-darwin-arm64 ./
 
           # 压缩产物（略，同之前配置）
           cd ${OUTPUT_DIR}
@@ -70,16 +68,16 @@ jobs:
 
           echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
 
+          RELFILE="./release_readme.txt"
+          echo "构建SHA: ${GITHUB_SHA}\n" >> ${RELFILE}
+          echo "构建时间: $(date +%Y-%m-%d %H:%M:%S)\n" >> ${RELFILE}
+
       - name: Create and Publish GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.create-tag.outputs.auto_tag }}  # 指定自动创建的 Tag
           name: Auto Release ${{ steps.create-tag.outputs.auto_tag }}
-          body: |
-            ## 自动创建的 Release（基于代码提交）
-            - 提交哈希：${GITHUB_SHA}
-            - 构建时间：$(date +%Y-%m-%d %H:%M:%S)
+          body_path: ./release_readme.txt
           files: ${{ steps.build.outputs.output_dir }}/*
-          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
