@@ -31,7 +31,7 @@ jobs:
           PROJECT_NAME="$(basename ${GITHUB_REPOSITORY})"
           COMMIT_HASH="${GITHUB_SHA::8}"  # 提取前 8 位提交哈希
           BUILD_TIME="$(date +%Y%m%d%H%M%S)"  # 构建时间戳
-          AUTO_TAG="v${BUILD_TIME}"  # 自动 Tag 格式
+          AUTO_TAG="v1.0.${BUILD_TIME}"  # 自动 Tag 格式
           OUTPUT_DIR="./dist"  # 产物输出目录
 
           # 创建输出目录
@@ -59,7 +59,8 @@ jobs:
           done
 
           # 读取 CHANGELOG.md 内容，处理换行符（确保 Markdown 格式正常渲染）
-          CHANGELOG_CONTENT="- 构建SHA：${GITHUB_SHA}\\n-构建时间：$(date '+%Y-%m-%d %H:%M:%S')"
+          CHANGELOG_CONTENT="- 构建SHA：${GITHUB_SHA}<br>
+          -构建时间：$(date '+%Y-%m-%d %H:%M:%S')"
 
           # 输出关键变量，传递给后续步骤
           echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
