@@ -82,11 +82,11 @@ jobs:
           AUTO_TAG="${{ steps.build.outputs.auto_tag }}"
 
           # 创建 Tag 并推送到远程仓库
-          git tag ${AUTO_TAG}
-          git push origin ${AUTO_TAG}
+          #git tag ${AUTO_TAG}
+          #git push origin ${AUTO_TAG}
 
           # 验证 Tag 推送结果
-          echo "已创建并推送 Tag：${AUTO_TAG}"
+          #echo "已创建并推送 Tag：${AUTO_TAG}"
           echo "pushed_tag=${AUTO_TAG}" >> $GITHUB_OUTPUT
 
       # 步骤 5：创建 GitHub Release，上传产物，body 读取 CHANGELOG.md
