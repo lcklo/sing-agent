@@ -6,71 +6,97 @@ on:
     tags:
       - 'v*'
 
-# 定义工作流的权限（用于创建 Release 和上传产物）
-permissions:
-  contents: write
-
 jobs:
-  build:
-    name: Build and Release
+  build-and-publish-release:
     runs-on: ubuntu-latest
-    strategy:
-      # 多平台编译矩阵：可根据需要增删平台
-      matrix:
-        goos: [linux, windows, darwin]
-        goarch: [amd64, arm64]
-        # 排除不兼容的组合（例如 darwin/386 已废弃）
-        exclude:
-          - goos: windows
-            goarch: arm64
-
     steps:
-      # 1. 检出代码
-      - name: Checkout code
+      # 步骤 1：拉取仓库完整代码
+      - name: Checkout Repository Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 拉取完整历史，确保能获取 Tag 信息
+          fetch-depth: 0  # 拉取完整提交历史，用于 Git 配置
 
-      # 2. 设置 Go 环境
-      - name: Set up Go
+      # 步骤 2：配置 Go 环境（指定版本，启用模块缓存）
+      - name: Set Up Go Environment
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25' # 替换为你的项目 Go 版本
-          cache: true # 启用 Go 模块缓存，加速构建
+          go-version: '1.25'  # 与项目 Go 版本保持一致
+          cache: true  # 加速后续构建，避免重复下载依赖
 
-      # 3. 构建可执行文件
-      - name: Build
-        env:
-          # 从 Tag 中提取版本号（去掉前缀 v）
-          VERSION: ${{ github.ref_name }}
-          # 平台和架构变量
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+      # 步骤 3：跨平台构建 Go 产物（压缩优化）
+      - name: Build Cross-Platform Go Binary
+        id: build
         run: |
-          # 定义输出文件名（区分平台）
-          BINARY_NAME="sing-agent_${VERSION}_${GOOS}_${GOARCH}"
-          # Windows 系统添加 .exe 后缀
-          if [ "$GOOS" = "windows" ]; then
-            BINARY_NAME+=".exe"
-          fi
-          # 编译 Go 程序（添加版本信息到程序中）
-          go build -ldflags "-X main.version=${VERSION}" -o "${BINARY_NAME}" ./...
-          # 压缩产物（方便上传）
-          if [ "$GOOS" = "windows" ]; then
-            zip "${BINARY_NAME}.zip" "${BINARY_NAME}"
-          else
-            tar -czf "${BINARY_NAME}.tar.gz" "${BINARY_NAME}"
-          fi
+          # 定义变量（生成唯一版本标识，避免 Tag/产物冲突）
+          PROJECT_NAME="$(basename ${GITHUB_REPOSITORY})"
+          COMMIT_HASH="${GITHUB_SHA::8}"  # 提取前 8 位提交哈希
+          BUILD_TIME="$(date +%Y%m%d%H%M%S)"  # 构建时间戳
+          #AUTO_TAG="v1.0.${BUILD_TIME}"  # 自动 Tag 格式
+          AUTO_TAG=${GITHUB_REF#refs/tags/}
+          OUTPUT_DIR="./dist"  # 产物输出目录
 
-      # 4. 创建 Release 并上传产物
-      - name: Release
-        uses: softprops/action-gh-release@v2
+          # 创建输出目录
+          mkdir -p ${OUTPUT_DIR}
+
+          # 跨平台构建（精简二进制体积，-ldflags "-s -w" 移除调试信息）
+          echo "开始跨平台构建，版本：${AUTO_TAG}"
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-linux-amd64 ./
+          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-linux-arm64 ./
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-windows-amd64.exe ./
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-darwin-amd64 ./
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o ${OUTPUT_DIR}/${PROJECT_NAME}-darwin-arm64 ./
+
+          # 压缩产物（减小体积，Linux/macOS 生成 .tar.gz，Windows 生成 .zip）
+          cd ${OUTPUT_DIR}
+          for file in *; do
+            if [ -f "$file" ]; then
+              if [[ "$file" == *.exe ]]; then
+                zip ${file}.zip ${file}
+              else
+                tar -zcvf ${file}.tar.gz ${file}
+              fi
+              rm -f ${file}  # 删除原二进制文件，仅保留压缩包
+            fi
+          done
+
+          # 读取 CHANGELOG.md 内容，处理换行符（确保 Markdown 格式正常渲染）
+          CHANGELOG_CONTENT="- 构建SHA：${GITHUB_SHA}<br>
+          - 构建时间：$(date '+%Y-%m-%d %H:%M:%S')"
+
+          # 输出关键变量，传递给后续步骤
+          echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
+          echo "auto_tag=${AUTO_TAG}" >> $GITHUB_OUTPUT
+          echo "changelog_content<<EOF" >> $GITHUB_OUTPUT
+          echo "${CHANGELOG_CONTENT}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # 步骤 4：配置 Git 身份，自动创建并推送 Tag（解决 Release 依赖 Tag 问题）
+      - name: Create and Push Auto Git Tag
+        id: push-tag
+        run: |
+          # 配置 Git 提交者身份（否则无法推送 Tag 到远程仓库）
+          git config --global user.name "GitHub Actions Auto Build"
+          git config --global user.email "actions@github.com"
+
+          # 提取步骤 3 生成的自动 Tag
+          AUTO_TAG="${{ steps.build.outputs.auto_tag }}"
+
+          # 创建 Tag 并推送到远程仓库
+          git tag ${AUTO_TAG}
+          git push origin ${AUTO_TAG}
+
+          # 验证 Tag 推送结果
+          echo "已创建并推送 Tag：${AUTO_TAG}"
+          echo "pushed_tag=${AUTO_TAG}" >> $GITHUB_OUTPUT
+
+      # 步骤 5：创建 GitHub Release，上传产物，body 读取 CHANGELOG.md
+      - name: Create and Publish GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          # 上传编译产物（匹配所有平台的压缩包）
-          files: |
-            *.zip
-            *.tar.gz
-          # 自动生成 Release 说明（也可手动指定 body）
-          generate_release_notes: true
+          tag_name: ${{ steps.push-tag.outputs.pushed_tag }}  # 指定自动创建的 Tag
+          name: ${{ steps.push-tag.outputs.pushed_tag }}  # Release 标题
+          body: ${{ steps.build.outputs.changelog_content }}  # 核心：读取 CHANGELOG.md 内容
+          files: ${{ steps.build.outputs.output_dir }}/*  # 上传所有压缩产物
+          prerelease: false  # 标记为预发布（避免与正式 Tag 版本混淆，可改为 false）
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub 自动提供的令牌
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub 自动注入权限令牌
