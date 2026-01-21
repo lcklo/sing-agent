@@ -6,7 +6,7 @@
 
 ---
 
-# sing-box
+# sing-angent
 
 The universal proxy platform.
 
@@ -14,7 +14,6 @@ The universal proxy platform.
 
 ## Documentation
 
-https://sing-box.sagernet.org
 
 ## License
 
