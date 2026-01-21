@@ -6,7 +6,7 @@
 
 ---
 
-# sing-angent
+# sing-agent
 
 The universal proxy platform.
 
