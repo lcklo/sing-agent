@@ -58,10 +58,12 @@ func NewCommandServer(handler CommandServerHandler, platformInterface PlatformIn
 	server.StartedService = daemon.NewStartedService(daemon.ServiceOptions{
 		Context: ctx,
 		// Platform:         platformWrapper,
-		Handler:     (*platformHandler)(server),
-		Debug:       sDebug,
-		LogMaxLines: sLogMaxLines,
-		OOMKiller:   memoryLimitEnabled,
+		Handler:           (*platformHandler)(server),
+		Debug:             sDebug,
+		LogMaxLines:       sLogMaxLines,
+		OOMKillerEnabled:  sOOMKillerEnabled,
+		OOMKillerDisabled: sOOMKillerDisabled,
+		OOMMemoryLimit:    uint64(sOOMMemoryLimit),
 		// WorkingDirectory: sWorkingPath,
 		// TempDirectory:    sTempPath,
 		// UserID:           sUserID,
@@ -171,6 +173,7 @@ type OverrideOptions struct {
 }
 
 func (s *CommandServer) StartOrReloadService(configContent string, options *OverrideOptions) error {
+	saveConfigSnapshot(configContent)
 	err := s.StartedService.StartOrReloadService(configContent, &daemon.OverrideOptions{
 		AutoRedirect:   options.AutoRedirect,
 		IncludePackage: iteratorToArray(options.IncludePackage),
@@ -179,7 +182,6 @@ func (s *CommandServer) StartOrReloadService(configContent string, options *Over
 	if err != nil {
 		return err
 	}
-	saveConfigSnapshot(configContent)
 	return nil
 }
 
