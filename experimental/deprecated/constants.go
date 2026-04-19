@@ -93,13 +93,20 @@ var OptionInlineACME = Note{
 	MigrationLink:     "https://sing-box.sagernet.org/migration/#migrate-inline-acme-to-certificate-provider",
 }
 
-var OptionIPAcceptAny = Note{
-	Name:              "dns-rule-ip-accept-any",
-	Description:       "Legacy `ip_accept_any` DNS rule item",
+var OptionLegacyRuleSetDownloadDetour = Note{
+	Name:              "legacy-rule-set-download-detour",
+	Description:       "legacy `download_detour` remote rule-set option",
 	DeprecatedVersion: "1.14.0",
 	ScheduledVersion:  "1.16.0",
-	EnvName:           "DNS_RULE_IP_ACCEPT_ANY",
-	MigrationLink:     "https://sing-box.sagernet.org/migration/#migrate-address-filter-fields-to-response-matching",
+	EnvName:           "LEGACY_RULE_SET_DOWNLOAD_DETOUR",
+}
+
+var OptionLegacyTailscaleEndpointDialer = Note{
+	Name:              "legacy-tailscale-endpoint-dialer",
+	Description:       "legacy dialer options in Tailscale endpoint",
+	DeprecatedVersion: "1.14.0",
+	ScheduledVersion:  "1.16.0",
+	EnvName:           "LEGACY_TAILSCALE_ENDPOINT_DIALER",
 }
 
 var OptionRuleSetIPCIDRAcceptEmpty = Note{
@@ -129,13 +136,43 @@ var OptionLegacyDNSRuleStrategy = Note{
 	MigrationLink:     "https://sing-box.sagernet.org/migration/#migrate-dns-rule-action-strategy-to-rule-items",
 }
 
+var OptionIndependentDNSCache = Note{
+	Name:              "independent-dns-cache",
+	Description:       "`independent_cache` DNS option",
+	DeprecatedVersion: "1.14.0",
+	ScheduledVersion:  "1.16.0",
+	EnvName:           "INDEPENDENT_DNS_CACHE",
+	MigrationLink:     "https://sing-box.sagernet.org/migration/#migrate-independent-dns-cache",
+}
+
+var OptionStoreRDRC = Note{
+	Name:              "store-rdrc",
+	Description:       "`store_rdrc` cache file option",
+	DeprecatedVersion: "1.14.0",
+	ScheduledVersion:  "1.16.0",
+	EnvName:           "STORE_RDRC",
+	MigrationLink:     "https://sing-box.sagernet.org/migration/#migrate-store-rdrc",
+}
+
+var OptionImplicitDefaultHTTPClient = Note{
+	Name:              "implicit-default-http-client",
+	Description:       "implicit default HTTP client using default outbound for remote rule-sets",
+	DeprecatedVersion: "1.14.0",
+	ScheduledVersion:  "1.16.0",
+	EnvName:           "IMPLICIT_DEFAULT_HTTP_CLIENT",
+}
+
 var Options = []Note{
 	OptionOutboundDNSRuleItem,
 	OptionMissingDomainResolver,
 	OptionLegacyDomainStrategyOptions,
 	OptionInlineACME,
-	OptionIPAcceptAny,
+	OptionLegacyRuleSetDownloadDetour,
+	OptionLegacyTailscaleEndpointDialer,
 	OptionRuleSetIPCIDRAcceptEmpty,
 	OptionLegacyDNSAddressFilter,
 	OptionLegacyDNSRuleStrategy,
+	OptionIndependentDNSCache,
+	OptionStoreRDRC,
+	OptionImplicitDefaultHTTPClient,
 }
