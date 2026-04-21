@@ -1,4 +1,3 @@
-> Sponsored by [Warp](https://go.warp.dev/sing-box), built for coding with multiple AI agents
 
 ---
 
